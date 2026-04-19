@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lingua — Live Translator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#070c18;--s1:#0f1623;--s2:#161f30;--s3:#1c2840;
+  --bdr:rgba(255,255,255,0.07);--bhi:rgba(99,179,237,0.45);
+  --tx:#dde8f8;--mu:#5a6a88;
+  --a:#63b3ed;--a2:#76e4b7;--a3:#f6ad55;--red:#fc8181;
+  --font:'Sora',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden}
+.wrap{max-width:860px;margin:0 auto;padding:1.4rem 1rem 5rem}
+
+/* ── Header ── */
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.6rem}
+.logo{display:flex;align-items:center;gap:10px}
+.li{width:38px;height:38px;border-radius:9px;background:linear-gradient(135deg,#63b3ed,#76e4b7);display:flex;align-items:center;justify-content:center;font-size:18px}
+.ln{font-size:1.1rem;font-weight:600;letter-spacing:-.02em}
+.ls{font-size:.65rem;color:var(--mu);font-family:var(--mono);letter-spacing:.07em}
+.net{display:flex;align-items:center;gap:6px;font-size:.72rem;font-family:var(--mono);color:var(--mu)}
+.ndot{width:6px;height:6px;border-radius:50%;background:var(--a2);box-shadow:0 0 5px var(--a2);animation:blink 2s infinite}
+.ndot.off{background:var(--a3);box-shadow:0 0 5px var(--a3)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:4px;background:var(--s1);border:1px solid var(--bdr);border-radius:9px;padding:4px;margin-bottom:1.3rem}
+.tab{flex:1;padding:7px 4px;background:transparent;border:none;border-radius:6px;color:var(--mu);font-family:var(--font);font-size:.8rem;font-weight:500;cursor:pointer;transition:all .15s}
+.tab.on{background:var(--s2);color:var(--tx)}
+.tab:hover:not(.on){color:var(--tx)}
+
+/* ── Mode panels ── */
+.mode{display:none}.mode.on{display:block}
+
+/* ── Lang selector row ── */
+.lrow{display:grid;grid-template-columns:1fr 40px 1fr;gap:9px;align-items:center;margin-bottom:1.2rem}
+.lw label{display:block;font-size:.65rem;font-family:var(--mono);color:var(--mu);margin-bottom:4px;letter-spacing:.06em}
+.lsel{width:100%;background:var(--s1);border:1px solid var(--bdr);border-radius:8px;color:var(--tx);font-family:var(--font);font-size:.9rem;font-weight:500;padding:8px 12px;appearance:none;cursor:pointer}
+.lsel:focus{outline:none;border-color:var(--bhi)}
+.swp{width:40px;height:40px;margin-top:18px;background:var(--s2);border:1px solid var(--bdr);border-radius:50%;color:var(--a);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .22s}
+.swp:hover{border-color:var(--a);transform:rotate(180deg)}
+
+/* ── Translate panels ── */
+.tpanels{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem}
+@media(max-width:540px){.tpanels{grid-template-columns:1fr}}
+.tpanel{background:var(--s1);border:1px solid var(--bdr);border-radius:12px;overflow:hidden}
+.tphdr{display:flex;align-items:center;justify-content:space-between;padding:8px 12px 6px;border-bottom:1px solid var(--bdr)}
+.tplang{font-size:.76rem;font-weight:600;color:var(--a)}
+.tplang.o{color:var(--a2)}
+.tpacts{display:flex;gap:4px;align-items:center}
+.ibtn{width:26px;height:26px;background:transparent;border:1px solid var(--bdr);border-radius:5px;color:var(--mu);font-size:.76rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s}
+.ibtn:hover{border-color:var(--bhi);color:var(--a)}
+.ibtn.on{color:var(--a2);border-color:rgba(118,228,183,.4);animation:spkp .8s infinite}
+@keyframes spkp{0%,100%{opacity:1}50%{opacity:.4}}
+.tpbody{padding:12px;min-height:110px}
+textarea{width:100%;min-height:90px;background:transparent;border:none;outline:none;resize:none;color:var(--tx);font-family:var(--font);font-size:.95rem;line-height:1.6}
+textarea::placeholder{color:var(--mu)}
+.tout{font-size:.95rem;line-height:1.6;min-height:90px;white-space:pre-wrap;word-break:break-word}
+.ph{color:var(--mu);font-style:italic}
+.ccnt{font-size:.67rem;font-family:var(--mono);color:var(--mu);text-align:right;padding:0 12px 6px}
+.dbadge{display:none;font-size:.64rem;font-family:var(--mono);padding:1px 6px;border-radius:20px;background:rgba(246,173,85,.1);color:var(--a3);border:1px solid rgba(246,173,85,.2)}
+
+/* ── Translate mic row ── */
+.microw{display:flex;align-items:center;gap:16px;padding:.9rem 1.3rem;background:var(--s1);border:1px solid var(--bdr);border-radius:12px;margin-bottom:1rem}
+.micbtn{width:58px;height:58px;border-radius:50%;background:var(--s2);border:2px solid var(--bdr);color:var(--mu);font-size:1.35rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.micbtn:hover{border-color:var(--a);color:var(--a)}
+.micbtn.rec{border-color:var(--red);color:var(--red);background:rgba(252,129,129,.07);animation:rpls 1s infinite}
+@keyframes rpls{0%,100%{box-shadow:0 0 0 0 rgba(252,129,129,.3)}50%{box-shadow:0 0 0 12px rgba(252,129,129,0)}}
+.micinf{font-size:.71rem;color:var(--mu);font-family:var(--mono)}
+.micinf strong{display:block;color:var(--tx);font-size:.8rem;margin-bottom:1px}
+.qpl{flex:1}.qpl-lbl{font-size:.71rem;color:var(--mu);margin-bottom:5px}
+.qpbtns{display:flex;flex-wrap:wrap;gap:4px}
+.qpb{padding:3px 8px;background:var(--s2);border:1px solid var(--bdr);border-radius:20px;color:var(--mu);font-size:.71rem;cursor:pointer;font-family:var(--font);transition:all .12s}
+.qpb:hover{border-color:var(--bhi);color:var(--a)}
+
+/* ── Add language ── */
+.addlang{display:flex;align-items:center;gap:8px;background:var(--s1);border:1px dashed var(--bdr);border-radius:10px;padding:10px 12px}
+.addlang span{font-size:.76rem;color:var(--mu);white-space:nowrap}
+.addlang input{flex:1;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--tx);font-family:var(--font);padding:5px 10px;font-size:.8rem;outline:none}
+.addlang input:focus{border-color:var(--bhi)}
+.addbtn{padding:5px 13px;background:rgba(99,179,237,.07);border:1px solid rgba(99,179,237,.2);border-radius:6px;color:var(--a);font-family:var(--font);font-size:.78rem;cursor:pointer;white-space:nowrap;transition:all .12s}
+.addbtn:hover{background:rgba(99,179,237,.15)}
+.errbox{margin-top:9px;background:rgba(252,129,129,.05);border:1px solid rgba(252,129,129,.18);border-radius:8px;padding:9px 12px;font-size:.72rem;font-family:var(--mono);color:var(--red);display:none;word-break:break-all}
+
+/* ════════════════════════════════════════════
+   CONVERSATION MODE — the main new feature
+   ════════════════════════════════════════════ */
+
+/* Lang config cards */
+.cv-langs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.1rem}
+.cv-card{background:var(--s1);border:1px solid var(--bdr);border-radius:12px;padding:12px 14px;transition:border-color .2s}
+.cv-card.speaking{border-color:var(--a);box-shadow:0 0 0 3px rgba(99,179,237,.08)}
+.cv-card.speaking.B{border-color:var(--a2);box-shadow:0 0 0 3px rgba(118,228,183,.08)}
+.cv-card-lbl{font-size:.63rem;font-family:var(--mono);color:var(--mu);margin-bottom:6px;letter-spacing:.06em}
+.cv-card-name{font-size:.95rem;font-weight:600;color:var(--a);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.cv-card-name.B{color:var(--a2)}
+.cv-vol{height:3px;background:var(--s3);border-radius:2px;overflow:hidden;margin-top:4px}
+.cv-vol-bar{height:100%;background:var(--a);border-radius:2px;width:0%;transition:width .08s}
+.cv-vol-bar.B{background:var(--a2)}
+.cv-status{font-size:.65rem;font-family:var(--mono);color:var(--mu);margin-top:5px;min-height:14px}
+
+/* Big start button */
+.cv-startrow{display:flex;flex-direction:column;align-items:center;margin-bottom:1.1rem;gap:8px}
+.cv-startbtn{width:80px;height:80px;border-radius:50%;background:var(--s2);border:2px solid var(--bdr);color:var(--mu);font-size:2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;position:relative}
+.cv-startbtn:hover{border-color:var(--a);color:var(--a)}
+.cv-startbtn.active{border-color:var(--a2);color:var(--a2);background:rgba(118,228,183,.06);animation:rpls2 1.5s infinite}
+@keyframes rpls2{0%,100%{box-shadow:0 0 0 0 rgba(118,228,183,.25)}60%{box-shadow:0 0 0 18px rgba(118,228,183,0)}}
+.cv-startlbl{font-size:.78rem;font-family:var(--mono);color:var(--mu);text-align:center}
+.cv-startlbl strong{display:block;color:var(--tx);font-size:.88rem;margin-bottom:2px}
+
+/* Status bar */
+.cv-statusbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--s1);border:1px solid var(--bdr);border-radius:8px;margin-bottom:1rem;font-size:.73rem;font-family:var(--mono);color:var(--mu)}
+.cv-indicator{width:8px;height:8px;border-radius:50%;background:var(--mu);flex-shrink:0}
+.cv-indicator.listening{background:var(--a2);box-shadow:0 0 6px var(--a2);animation:blink .8s infinite}
+.cv-indicator.thinking{background:var(--a3);box-shadow:0 0 6px var(--a3);animation:blink .4s infinite}
+.cv-indicator.speaking{background:var(--a);box-shadow:0 0 6px var(--a);animation:blink .6s infinite}
+
+/* Chat bubbles */
+.cv-msgs{min-height:200px;max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:4px 0;margin-bottom:1rem}
+.cv-msgs::-webkit-scrollbar{width:3px}
+.cv-msgs::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:2px}
+.cv-empty{display:flex;align-items:center;justify-content:center;min-height:200px;color:var(--mu);font-size:.82rem;text-align:center;line-height:1.7}
+
+.bubble{display:flex;flex-direction:column;max-width:85%;animation:fadeup .25s ease}
+@keyframes fadeup{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.bubble.A{align-self:flex-start}
+.bubble.B{align-self:flex-end;align-items:flex-end}
+
+.bubble-inner{padding:10px 14px;border-radius:12px;font-size:.88rem;line-height:1.55}
+.bubble.A .bubble-inner{background:var(--s2);border:1px solid var(--bdr);border-bottom-left-radius:3px}
+.bubble.B .bubble-inner{background:rgba(99,179,237,.1);border:1px solid rgba(99,179,237,.18);border-bottom-right-radius:3px}
+
+.bubble-orig{font-size:.73rem;color:var(--mu);font-style:italic;margin-bottom:4px}
+.bubble-trans{color:var(--tx);font-size:.9rem}
+.bubble-trans.pending{color:var(--mu)}
+
+.bubble-meta{display:flex;align-items:center;gap:6px;margin-top:4px}
+.bubble-lang{font-size:.63rem;font-family:var(--mono);padding:1px 6px;border-radius:4px;background:var(--s2);color:var(--mu)}
+.bubble.B .bubble-lang{background:rgba(99,179,237,.14);color:var(--a)}
+.bubble-spk{width:20px;height:20px;background:transparent;border:1px solid var(--bdr);border-radius:4px;color:var(--mu);font-size:.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s}
+.bubble-spk:hover{color:var(--a);border-color:var(--bhi)}
+
+/* Waveform visualiser */
+.cv-wave{display:flex;align-items:center;justify-content:center;gap:3px;height:28px;margin-bottom:.6rem}
+.cv-wave-bar{width:3px;border-radius:2px;background:var(--mu);transition:height .08s,background .12s}
+
+/* History */
+.histbox{background:var(--s1);border:1px solid var(--bdr);border-radius:12px;overflow:hidden;margin-bottom:1rem}
+.histtog{width:100%;padding:10px 13px;background:transparent;border:none;cursor:pointer;color:var(--tx);font-family:var(--font);font-size:.82rem;font-weight:500;display:flex;align-items:center;justify-content:space-between}
+.histcnt{font-size:.71rem;color:var(--mu);font-family:var(--mono)}
+.histlist{padding:0 10px 10px;display:flex;flex-direction:column;gap:5px}
+.hi{background:var(--s2);border:1px solid var(--bdr);border-radius:6px;padding:7px 10px;cursor:pointer;transition:border-color .12s}
+.hi:hover{border-color:var(--bhi)}
+.hi-pair{font-size:.67rem;color:var(--mu);margin-bottom:2px}
+.hi-orig{font-size:.79rem;color:var(--tx);margin-bottom:1px}
+.hi-trans{font-size:.79rem;color:var(--a2);margin-bottom:1px}
+.hi-t{font-size:.64rem;color:var(--mu);font-family:var(--mono)}
+.clrbtn{background:none;border:1px solid var(--bdr);border-radius:7px;color:var(--mu);font-family:var(--font);font-size:.77rem;padding:6px 15px;cursor:pointer;display:block;margin:0 auto;transition:all .12s}
+.clrbtn:hover{border-color:var(--red);color:var(--red)}
+
+.dots span{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--a);animation:dot 1.2s infinite;margin-left:2px}
+.dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}
+@keyframes dot{0%,80%,100%{transform:scale(.75);opacity:.4}40%{transform:scale(1.1);opacity:1}}
+
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--s2);border:1px solid var(--bdr);border-radius:8px;padding:8px 15px;font-size:.77rem;color:var(--tx);font-family:var(--mono);opacity:0;transition:opacity .22s;pointer-events:none;z-index:9999;white-space:nowrap}
+.toast.show{opacity:1}
+
+.cv-clearrow{text-align:right;margin-bottom:.4rem}
+.cv-clrbtn{background:none;border:none;font-size:.71rem;font-family:var(--mono);color:var(--mu);cursor:pointer}
+.cv-clrbtn:hover{color:var(--red)}
+
+/* Silence timer bar */
+.silence-bar{height:2px;background:var(--s3);border-radius:1px;overflow:hidden;margin-bottom:.3rem}
+.silence-fill{height:100%;background:var(--a3);border-radius:1px;width:0%;transition:width .1s linear}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="hdr">
+    <div class="logo">
+      <div class="li">🌐</div>
+      <div><div class="ln">Lingua</div><div class="ls">LIVE TRANSLATOR</div></div>
+    </div>
+    <div class="net"><div class="ndot" id="ndot"></div><span id="nlabel">online</span></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab on" id="tab-translate"     onclick="setMode('translate')">⇄ Translate</button>
+    <button class="tab"    id="tab-conversation"  onclick="setMode('conversation')">🎙 Live Convo</button>
+    <button class="tab"    id="tab-history"       onclick="setMode('history')">📋 History</button>
+  </div>
+
+  <!-- ══════════ TRANSLATE MODE ══════════ -->
+  <div class="mode on" id="mode-translate">
+    <div class="lrow">
+      <div class="lw"><label>FROM</label><select class="lsel" id="fromLang" onchange="onLangChange()"></select></div>
+      <button class="swp" onclick="swapLangs()">⇄</button>
+      <div class="lw"><label>TO</label><select class="lsel" id="toLang" onchange="onLangChange()"></select></div>
+    </div>
+    <div class="tpanels">
+      <div class="tpanel">
+        <div class="tphdr">
+          <span class="tplang" id="inLabel">🇬🇧 English</span>
+          <div class="tpacts">
+            <span class="dbadge" id="dbadge">detected</span>
+            <button class="ibtn" onclick="clearIn()">✕</button>
+            <button class="ibtn" onclick="copyT('in')">⎘</button>
+            <button class="ibtn" id="spkIn" onclick="speakPanel('in')">▶</button>
+          </div>
+        </div>
+        <div class="tpbody"><textarea id="inTxt" placeholder="Type or speak…" oninput="onInput()" maxlength="1000"></textarea></div>
+        <div class="ccnt"><span id="ccnt">0</span>/1000</div>
+      </div>
+      <div class="tpanel">
+        <div class="tphdr">
+          <span class="tplang o" id="outLabel">🇬🇷 Greek</span>
+          <div class="tpacts">
+            <button class="ibtn" onclick="copyT('out')">⎘</button>
+            <button class="ibtn" id="spkOut" onclick="speakPanel('out')">▶</button>
+          </div>
+        </div>
+        <div class="tpbody"><div class="tout" id="tOut"><span class="ph">Translation appears here…</span></div></div>
+      </div>
+    </div>
+    <div class="microw">
+      <div style="text-align:center">
+        <button class="micbtn" id="micBtn" onclick="toggleMic()">🎤</button>
+        <div class="micinf" id="micInf"><strong>Press to speak</strong>auto-detects</div>
+      </div>
+      <div class="qpl">
+        <div class="qpl-lbl">Quick phrases</div>
+        <div class="qpbtns" id="qpBtns"></div>
+      </div>
+    </div>
+    <div class="addlang">
+      <span>+ Add language</span>
+      <input type="text" id="newLangIn" placeholder="e.g. French, Arabic, Japanese…" onkeydown="if(event.key==='Enter')addLang()">
+      <button class="addbtn" onclick="addLang()">Add</button>
+    </div>
+    <div class="errbox" id="errbox"></div>
+  </div>
+
+  <!-- ══════════ CONVERSATION MODE ══════════ -->
+  <div class="mode" id="mode-conversation">
+
+    <!-- Language config -->
+    <div class="cv-langs">
+      <div class="cv-card" id="cardA">
+        <div class="cv-card-lbl">PERSON A</div>
+        <div class="cv-card-name" id="cardAName">🇬🇧 English</div>
+        <select class="lsel" id="cvLangA" onchange="updateConvoLangs()" style="font-size:.8rem;padding:5px 10px"></select>
+        <div class="cv-vol"><div class="cv-vol-bar" id="volA"></div></div>
+        <div class="cv-status" id="statA">—</div>
+      </div>
+      <div class="cv-card" id="cardB">
+        <div class="cv-card-lbl">PERSON B</div>
+        <div class="cv-card-name B" id="cardBName">🇬🇷 Greek</div>
+        <select class="lsel" id="cvLangB" onchange="updateConvoLangs()" style="font-size:.8rem;padding:5px 10px"></select>
+        <div class="cv-vol"><div class="cv-vol-bar B" id="volB"></div></div>
+        <div class="cv-status" id="statB">—</div>
+      </div>
+    </div>
+
+    <!-- Start button -->
+    <div class="cv-startrow">
+      <button class="cv-startbtn" id="cvStartBtn" onclick="toggleConvo()">🎙</button>
+      <div class="cv-startlbl" id="cvStartLbl"><strong>Tap to start</strong>Both people speak freely</div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="cv-statusbar" id="cvStatusBar" style="display:none">
+      <div class="cv-indicator listening" id="cvInd"></div>
+      <span id="cvStatTxt">Listening for speech…</span>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <span id="cvLangHint" style="color:var(--a3)"></span>
+      </div>
+    </div>
+
+    <!-- Silence timer -->
+    <div class="silence-bar" id="silenceBar" style="display:none"><div class="silence-fill" id="silenceFill"></div></div>
+
+    <!-- Waveform -->
+    <div class="cv-wave" id="cvWave" style="display:none"></div>
+
+    <!-- Messages -->
+    <div class="cv-clearrow"><button class="cv-clrbtn" onclick="clearConvo()">Clear conversation</button></div>
+    <div class="cv-msgs" id="cvMsgs">
+      <div class="cv-empty">Start the conversation — both people can speak freely<br>The app will detect who's speaking which language</div>
+    </div>
+  </div>
+
+  <!-- ══════════ HISTORY MODE ══════════ -->
+  <div class="mode" id="mode-history">
+    <div class="histbox">
+      <button class="histtog" onclick="toggleHistVis()">
+        <span>📋 Translation history</span>
+        <span class="histcnt" id="histcnt">0 items</span>
+      </button>
+      <div class="histlist" id="histlist"></div>
+    </div>
+    <button class="clrbtn" onclick="clearHist()">Clear history</button>
+  </div>
+
+</div><!-- /wrap -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════
+const BASE_LANGS = [
+  { code:'en', name:'English', flag:'🇬🇧', bcp:'en-US' },
+  { code:'el', name:'Greek',   flag:'🇬🇷', bcp:'el-GR' },
+  { code:'ne', name:'Nepali',  flag:'🇳🇵', bcp:'ne-NP' },
+  { code:'hi', name:'Hindi',   flag:'🇮🇳', bcp:'hi-IN' },
+];
+const PHRASES = ['Hello!','Thank you','Where is…?','How much?','Help!','Good morning','Excuse me'];
+
+let langs   = [...BASE_LANGS];
+let fromCode= 'en', toCode = 'el';
+let tTimer  = null;
+let micRec  = null, micActive = false;
+let cache   = {}, hist = [];
+
+// ── Conversation state ──
+let convoActive    = false;
+let cvRecA         = null;  // SpeechRecognition for language A
+let cvRecB         = null;  // SpeechRecognition for language B
+let cvSpeaking     = false; // TTS is playing right now
+let cvSpeakQueue   = [];    // queued TTS items
+let audioCtxA      = null, analyserA = null, sourceA = null, streamA = null;
+let audioCtxB      = null, analyserB = null, sourceB = null, streamB = null;
+let waveAnimId     = null;
+let cvLangA        = 'en', cvLangB = 'el';
+let cvLastSpeakerA = 0, cvLastSpeakerB = 0; // timestamps of last speech
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+(function(){
+  try { cache = JSON.parse(localStorage.getItem('lg_c')||'{}'); } catch(e){}
+  try { hist  = JSON.parse(localStorage.getItem('lg_h')||'[]'); } catch(e){}
+  buildSelects();
+  buildPhrases();
+  setupTranslateMic();
+  updateNet();
+  window.addEventListener('online',  updateNet);
+  window.addEventListener('offline', updateNet);
+  if (window.speechSynthesis) {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+  }
+  buildWave();
+})();
+
+function buildSelects() {
+  const ids = ['fromLang','toLang','cvLangA','cvLangB'];
+  ids.forEach(id => {
+    const el = document.getElementById(id); if (!el) return;
+    const prev = el.value;
+    el.innerHTML = langs.map(l => `<option value="${l.code}">${l.flag} ${l.name}</option>`).join('');
+    if (prev && langs.find(l=>l.code===prev)) el.value = prev;
+  });
+  document.getElementById('fromLang').value = fromCode;
+  document.getElementById('toLang').value   = toCode;
+  document.getElementById('cvLangA').value  = cvLangA;
+  document.getElementById('cvLangB').value  = cvLangB;
+  updateLabels();
+  updateConvoLangs();
+}
+
+function updateLabels() {
+  const f = L(fromCode), t = L(toCode);
+  document.getElementById('inLabel').textContent  = f.flag+' '+f.name;
+  document.getElementById('outLabel').textContent = t.flag+' '+t.name;
+}
+
+function updateConvoLangs() {
+  cvLangA = document.getElementById('cvLangA').value;
+  cvLangB = document.getElementById('cvLangB').value;
+  const la = L(cvLangA), lb = L(cvLangB);
+  document.getElementById('cardAName').textContent = la.flag+' '+la.name;
+  document.getElementById('cardBName').textContent = lb.flag+' '+lb.name;
+  // If already active, restart listeners with new langs
+  if (convoActive) { stopConvo(); setTimeout(startConvo, 300); }
+}
+
+function L(code) { return langs.find(l=>l.code===code) || langs[0]; }
+
+function buildPhrases() {
+  document.getElementById('qpBtns').innerHTML = PHRASES.map(p =>
+    `<button class="qpb" onclick="usePhrase(this)">${p}</button>`
+  ).join('');
+}
+function usePhrase(btn) { document.getElementById('inTxt').value = btn.textContent; onInput(); }
+
+function updateNet() {
+  const on = navigator.onLine;
+  document.getElementById('ndot').className    = 'ndot'+(on?'':' off');
+  document.getElementById('nlabel').textContent = on ? 'online' : 'offline – cache';
+}
+
+function buildWave() {
+  const w = document.getElementById('cvWave');
+  w.innerHTML = '';
+  for (let i=0; i<22; i++) {
+    const b = document.createElement('div');
+    b.className = 'cv-wave-bar';
+    b.style.height = '3px';
+    w.appendChild(b);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// TRANSLATE MODE
+// ═══════════════════════════════════════════════════════════
+function onLangChange() {
+  fromCode = document.getElementById('fromLang').value;
+  toCode   = document.getElementById('toLang').value;
+  updateLabels();
+  const t = document.getElementById('inTxt').value.trim();
+  if (t) doTranslate(t, fromCode, toCode, null);
+}
+
+function swapLangs() {
+  const cur = document.getElementById('tOut').textContent;
+  const isPlaceholder = !cur.trim() || cur.includes('Translation appears') || cur.includes('Translating');
+  [fromCode, toCode] = [toCode, fromCode];
+  document.getElementById('fromLang').value = fromCode;
+  document.getElementById('toLang').value   = toCode;
+  updateLabels();
+  if (!isPlaceholder) {
+    document.getElementById('inTxt').value = cur;
+    document.getElementById('ccnt').textContent = cur.length;
+    onInput();
+  }
+}
+
+function addLang() {
+  const inp  = document.getElementById('newLangIn');
+  const name = inp.value.trim();
+  if (!name) { toast('Enter a language name'); return; }
+  if (langs.find(l=>l.name.toLowerCase()===name.toLowerCase())) { toast('Already added'); return; }
+  const code = name.toLowerCase().replace(/\s+/g,'').slice(0,5)+'_'+Math.random().toString(36).slice(2,5);
+  langs.push({ code, name: name[0].toUpperCase()+name.slice(1), flag:'🌐',
+    bcp: name.slice(0,2).toLowerCase()+'-'+name.slice(0,2).toUpperCase() });
+  buildSelects();
+  inp.value = '';
+  toast('Added '+name);
+}
+
+function onInput() {
+  const txt = document.getElementById('inTxt').value;
+  document.getElementById('ccnt').textContent = txt.length;
+  clearTimeout(tTimer);
+  if (!txt.trim()) {
+    document.getElementById('tOut').innerHTML = '<span class="ph">Translation appears here…</span>';
+    document.getElementById('dbadge').style.display = 'none';
+    return;
+  }
+  tTimer = setTimeout(() => doTranslate(txt.trim(), fromCode, toCode, null), 600);
+}
+
+// ═══════════════════════════════════════════════════════════
+// TRANSLATION API
+// ═══════════════════════════════════════════════════════════
+async function doTranslate(text, fc, tc, onDone) {
+  const isUI = !onDone;
+  const key  = `${fc}|${tc}|${text}`;
+
+  if (cache[key]) {
+    const r = cache[key];
+    if (onDone) { onDone(r); return; }
+    showResult(r, fc);
+    addHist(text, r.translation, L(fc).name, L(tc).name);
+    speakTTS(r.translation, tc);
+    return;
+  }
+
+  if (!navigator.onLine) {
+    if (isUI) setOutHTML('<span style="color:var(--a3)">⚠ Offline — no cached translation</span>');
+    if (onDone) onDone({ translation:'(offline)', detected: fc });
+    return;
+  }
+
+  if (isUI) setOutHTML('Translating<span class="dots"><span></span><span></span><span></span></span>');
+
+  const fl = L(fc), tl = L(tc);
+  const prompt =
+    `Translate this text into ${tl.name}.\n`+
+    `Detect the source language and return its ISO 639-1 code.\n`+
+    `Reply ONLY with a single-line raw JSON object, no markdown:\n`+
+    `{"translation":"<translated>","detected":"<iso-code>"}\n\n`+
+    `Text: ${text}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model:      'claude-sonnet-4-20250514',
+        max_tokens: 1024,
+        messages:   [{ role:'user', content: prompt }]
+      })
+    });
+
+    if (!res.ok) { const t=await res.text(); throw new Error(`API ${res.status}: ${t.slice(0,200)}`); }
+
+    const data = await res.json();
+    let raw = (data.content?.[0]?.text || '').trim();
+    raw = raw.replace(/^```[a-z]*\s*/i,'').replace(/```\s*$/,'').trim();
+
+    const m = raw.match(/\{[\s\S]*?\}/);
+    let parsed = { translation: raw, detected: fc };
+    if (m) { try { parsed = JSON.parse(m[0]); } catch(e){} }
+
+    const result = { translation: parsed.translation || raw, detected: parsed.detected || fc };
+    cache[key] = result;
+    try { localStorage.setItem('lg_c', JSON.stringify(cache)); } catch(e){}
+
+    if (onDone) { onDone(result); return; }
+    showResult(result, fc);
+    addHist(text, result.translation, fl.name, tl.name);
+    speakTTS(result.translation, tc);
+
+  } catch(err) {
+    console.error(err);
+    if (isUI) {
+      setOutHTML(`<span style="color:var(--red)">Error: ${esc(err.message)}</span>`);
+      const eb = document.getElementById('errbox');
+      eb.textContent = err.message; eb.style.display = 'block';
+      setTimeout(()=>{ eb.style.display='none'; }, 7000);
+    }
+    if (onDone) onDone({ translation:'(error)', detected: fc });
+  }
+}
+
+function showResult(r, fc) {
+  document.getElementById('tOut').textContent = r.translation;
+  const bd = document.getElementById('dbadge');
+  if (r.detected && r.detected !== fc) {
+    const dl = langs.find(l=>l.code===r.detected);
+    bd.textContent = (dl?dl.flag+' ':'')+r.detected+' detected';
+    bd.style.display = 'inline-block';
+  } else { bd.style.display = 'none'; }
+}
+function setOutHTML(h) { document.getElementById('tOut').innerHTML = h; }
+
+// ═══════════════════════════════════════════════════════════
+// TTS ENGINE
+// ═══════════════════════════════════════════════════════════
+function speakTTS(text, langCode, onEnd) {
+  if (!text || !text.trim() || !window.speechSynthesis) { if(onEnd) onEnd(); return; }
+  const synth = window.speechSynthesis;
+
+  const doSpeak = () => {
+    const l   = L(langCode);
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang  = l.bcp || 'en-US';
+    utt.rate  = 0.88;
+    utt.pitch = 1.0;
+    const voices = synth.getVoices();
+    const v = voices.find(v=>v.lang===utt.lang) || voices.find(v=>v.lang.startsWith(utt.lang.slice(0,2)));
+    if (v) utt.voice = v;
+    utt.onend = utt.onerror = () => { if(onEnd) onEnd(); };
+    synth.speak(utt);
+  };
+
+  setTimeout(doSpeak, 80);
+}
+
+function speakPanel(which) {
+  const synth = window.speechSynthesis; if (!synth) { toast('TTS not supported'); return; }
+  const txt = which==='in'
+    ? document.getElementById('inTxt').value
+    : document.getElementById('tOut').textContent;
+  if (!txt || txt.includes('Translation appears') || txt.includes('Translating')) { toast('Nothing to speak'); return; }
+  const btnId = which==='in' ? 'spkIn' : 'spkOut';
+  const btn   = document.getElementById(btnId);
+  if (synth.speaking || synth.pending) { synth.cancel(); btn.classList.remove('on'); btn.textContent='▶'; return; }
+  const code = which==='in' ? fromCode : toCode;
+  const l    = L(code);
+  const utt  = new SpeechSynthesisUtterance(txt);
+  utt.lang   = l.bcp||'en-US'; utt.rate = 0.88; utt.pitch = 1.0;
+  const voices = synth.getVoices();
+  const v = voices.find(v=>v.lang===utt.lang)||voices.find(v=>v.lang.startsWith(utt.lang.slice(0,2)));
+  if (v) utt.voice = v;
+  btn.classList.add('on'); btn.textContent='⏹';
+  utt.onend = utt.onerror = () => { btn.classList.remove('on'); btn.textContent='▶'; };
+  synth.speak(utt);
+}
+
+// ═══════════════════════════════════════════════════════════
+// TRANSLATE MODE MIC (single-person)
+// ═══════════════════════════════════════════════════════════
+function setupTranslateMic() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+  micRec = new SR();
+  micRec.continuous     = false;
+  micRec.interimResults = true;
+  micRec.onresult = e => {
+    let final='', interim='';
+    for (const r of e.results) { if(r.isFinal) final+=r[0].transcript; else interim+=r[0].transcript; }
+    const txt = final||interim;
+    document.getElementById('inTxt').value = txt;
+    document.getElementById('ccnt').textContent = txt.length;
+    if (final) onInput();
+  };
+  micRec.onerror = e => { micActive=false; micUI(false); if(e.error!=='aborted') toast('Mic: '+e.error); };
+  micRec.onend   = () => { micActive=false; micUI(false); };
+}
+
+function toggleMic() {
+  if (!micRec) { toast('Speech recognition not supported'); return; }
+  if (micActive) { micRec.stop(); micActive=false; micUI(false); }
+  else {
+    micRec.lang = L(fromCode).bcp;
+    try { micRec.start(); micActive=true; micUI(true); }
+    catch(e) { toast('Mic: '+e.message); }
+  }
+}
+function micUI(on) {
+  const b=document.getElementById('micBtn'), i=document.getElementById('micInf');
+  b.classList.toggle('rec',on); b.textContent = on ? '⏹' : '🎤';
+  i.innerHTML = on ? '<strong style="color:var(--red)">Listening…</strong>tap to stop'
+                   : '<strong>Press to speak</strong>auto-detects';
+}
+
+// ═══════════════════════════════════════════════════════════
+// ██████████████████████████████████████████████████████████
+//  LIVE CONVERSATION ENGINE
+//  Strategy: Run TWO parallel SpeechRecognition instances,
+//  one locked to language A, one to language B.
+//  Both run continuously. When either fires a final result,
+//  we pause both, translate, speak the translation, then
+//  resume both. Language detection confirms which person spoke.
+// ██████████████████████████████████████████████████████████
+// ═══════════════════════════════════════════════════════════
+
+function toggleConvo() {
+  if (convoActive) stopConvo();
+  else             startConvo();
+}
+
+async function startConvo() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { toast('Speech recognition not supported in this browser (use Chrome)'); return; }
+
+  convoActive = true;
+  cvSpeaking  = false;
+  cvSpeakQueue= [];
+
+  // Update UI
+  const btn = document.getElementById('cvStartBtn');
+  const lbl = document.getElementById('cvStartLbl');
+  btn.classList.add('active');
+  btn.textContent = '⏹';
+  lbl.innerHTML   = '<strong>Listening…</strong>Both people speak freely';
+  document.getElementById('cvStatusBar').style.display = 'flex';
+  document.getElementById('silenceBar').style.display  = 'block';
+  document.getElementById('cvWave').style.display      = 'flex';
+  setCvStatus('listening', 'Listening for speech in '+L(cvLangA).name+' or '+L(cvLangB).name+'…');
+
+  // Start both recognisers
+  cvRecA = makeCvRec(SR, cvLangA, 'A');
+  cvRecB = makeCvRec(SR, cvLangB, 'B');
+  safeStart(cvRecA);
+  safeStart(cvRecB);
+
+  // Start waveform animation (mic input visualiser - simulated)
+  animateWave();
+}
+
+function makeCvRec(SR, langCode, side) {
+  const l   = L(langCode);
+  const rec = new SR();
+  rec.lang             = l.bcp || 'en-US';
+  rec.continuous       = true;   // keep running
+  rec.interimResults   = true;
+  rec.maxAlternatives  = 1;
+
+  let interimTimer = null;
+  let lastInterim  = '';
+
+  rec.onresult = (e) => {
+    if (cvSpeaking) return;  // don't process while TTS is playing
+
+    let final='', interim='';
+    for (let i=e.resultIndex; i<e.results.length; i++) {
+      if (e.results[i].isFinal) final   += e.results[i][0].transcript;
+      else                       interim += e.results[i][0].transcript;
+    }
+
+    // Show interim in status
+    if (interim && !final) {
+      lastInterim = interim;
+      setCardStatus(side, '🎤 '+interim.slice(0,40)+(interim.length>40?'…':''));
+      highlightCard(side, true);
+      // Reset silence timer
+      clearTimeout(interimTimer);
+      interimTimer = setTimeout(() => {
+        // Silence detected after speech — commit interim as final
+        if (lastInterim && convoActive && !cvSpeaking) {
+          processUtterance(lastInterim, side);
+          lastInterim = '';
+          setCardStatus(side, '—');
+          highlightCard(side, false);
+        }
+      }, 1200);
+    }
+
+    if (final) {
+      clearTimeout(interimTimer);
+      lastInterim = '';
+      if (convoActive && !cvSpeaking) {
+        processUtterance(final.trim(), side);
+        setCardStatus(side, '—');
+        highlightCard(side, false);
+      }
+    }
+  };
+
+  rec.onerror = (e) => {
+    if (!convoActive) return;
+    if (e.error === 'no-speech') {
+      // Normal — restart the recogniser
+      setTimeout(() => { if (convoActive && !cvSpeaking) safeStart(rec); }, 300);
+    } else if (e.error === 'aborted' || e.error === 'network') {
+      setTimeout(() => { if (convoActive && !cvSpeaking) safeStart(rec); }, 800);
+    } else {
+      toast('Recognition error ('+side+'): '+e.error);
+    }
+  };
+
+  rec.onend = () => {
+    if (convoActive && !cvSpeaking) {
+      // Auto-restart if still in convo mode
+      setTimeout(() => { if (convoActive && !cvSpeaking) safeStart(rec); }, 200);
+    }
+  };
+
+  return rec;
+}
+
+function safeStart(rec) {
+  try { rec.start(); } catch(e) {
+    // Already started or other error — ignore
+    if (!e.message.includes('already started')) console.warn('safeStart:', e.message);
+  }
+}
+
+function safeStop(rec) {
+  try { rec.stop(); } catch(e) {}
+}
+
+// processUtterance: figure out which direction to translate, then do it
+async function processUtterance(text, side) {
+  if (!text || text.trim().length < 2) return;
+  if (cvSpeaking) return;
+
+  // Side A speaks in langA → translate to langB
+  // Side B speaks in langB → translate to langA
+  const fc = side==='A' ? cvLangA : cvLangB;
+  const tc = side==='A' ? cvLangB : cvLangA;
+  const fl = L(fc), tl = L(tc);
+
+  // Pause both recognisers while TTS plays
+  pauseConvoRecs();
+  cvSpeaking = true;
+  setCvStatus('thinking', 'Translating… ('+fl.name+' → '+tl.name+')');
+
+  // Add bubble immediately
+  const bubbleId = addCvBubble(text, null, side, fl, tl);
+
+  // Translate
+  doTranslate(text, fc, tc, (result) => {
+    updateCvBubble(bubbleId, result.translation);
+    addHist(text, result.translation, fl.name, tl.name);
+
+    setCvStatus('speaking', 'Speaking translation…');
+
+    // Speak the translation
+    speakTTS(result.translation, tc, () => {
+      // TTS done — resume listening
+      cvSpeaking = false;
+      if (convoActive) {
+        setCvStatus('listening', 'Listening for speech in '+L(cvLangA).name+' or '+L(cvLangB).name+'…');
+        resumeConvoRecs();
+      }
+    });
+  });
+}
+
+function pauseConvoRecs() {
+  safeStop(cvRecA);
+  safeStop(cvRecB);
+}
+
+function resumeConvoRecs() {
+  setTimeout(() => {
+    if (convoActive && cvRecA) safeStart(cvRecA);
+    if (convoActive && cvRecB) safeStart(cvRecB);
+  }, 400);
+}
+
+function stopConvo() {
+  convoActive = false;
+  cvSpeaking  = false;
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  if (cvRecA) safeStop(cvRecA);
+  if (cvRecB) safeStop(cvRecB);
+  cvRecA = null; cvRecB = null;
+  cancelAnimationFrame(waveAnimId);
+
+  const btn = document.getElementById('cvStartBtn');
+  const lbl = document.getElementById('cvStartLbl');
+  btn.classList.remove('active');
+  btn.textContent = '🎙';
+  lbl.innerHTML   = '<strong>Tap to start</strong>Both people speak freely';
+  document.getElementById('cvStatusBar').style.display = 'none';
+  document.getElementById('silenceBar').style.display  = 'none';
+  document.getElementById('cvWave').style.display      = 'none';
+  setCardStatus('A','—'); setCardStatus('B','—');
+  highlightCard('A',false); highlightCard('B',false);
+}
+
+// ── Bubble management ──
+function addCvBubble(orig, translation, side, fl, tl) {
+  const msgs = document.getElementById('cvMsgs');
+  const emp  = msgs.querySelector('.cv-empty');
+  if (emp) msgs.innerHTML = '';
+
+  const id  = 'bbl'+Date.now()+Math.random().toString(36).slice(2,5);
+  const div = document.createElement('div');
+  div.className = 'bubble '+side;
+  div.innerHTML = `
+    <div class="bubble-inner">
+      <div class="bubble-orig">${esc(orig)}</div>
+      <div class="bubble-trans pending" id="${id}">${translation ? esc(translation) : '<span class="dots"><span></span><span></span><span></span></span>'}</div>
+    </div>
+    <div class="bubble-meta">
+      <span class="bubble-lang">${fl.flag} ${fl.name} → ${tl.flag} ${tl.name}</span>
+      <button class="bubble-spk" onclick="speakBubble('${id}','${side==='A'?cvLangB:cvLangA}')">▶</button>
+    </div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return id;
+}
+
+function updateCvBubble(id, translation) {
+  const el = document.getElementById(id);
+  if (el) { el.textContent = translation; el.classList.remove('pending'); }
+  document.getElementById('cvMsgs').scrollTop = 9999;
+}
+
+function speakBubble(id, langCode) {
+  const el = document.getElementById(id);
+  if (el) speakTTS(el.textContent, langCode);
+}
+
+// ── Card UI helpers ──
+function setCardStatus(side, txt) {
+  const el = document.getElementById('stat'+side);
+  if (el) el.textContent = txt;
+}
+function highlightCard(side, on) {
+  const el = document.getElementById('card'+side);
+  if (el) el.classList.toggle('speaking', on);
+}
+function setCvStatus(type, txt) {
+  const ind = document.getElementById('cvInd');
+  const lbl = document.getElementById('cvStatTxt');
+  if (ind) ind.className = 'cv-indicator '+type;
+  if (lbl) lbl.textContent = txt;
+}
+
+// ── Waveform animation (simulated — real AudioContext needs HTTPS in some browsers) ──
+function animateWave() {
+  const bars = document.querySelectorAll('.cv-wave-bar');
+  let t = 0;
+  function frame() {
+    if (!convoActive) return;
+    t += 0.08;
+    bars.forEach((b, i) => {
+      const h = cvSpeaking
+        ? 4 + 14 * Math.abs(Math.sin(t * 2.5 + i * 0.5))
+        : 2 + 8  * Math.abs(Math.sin(t * 1.2 + i * 0.4));
+      b.style.height = h+'px';
+      b.style.background = cvSpeaking ? 'var(--a)' : 'var(--mu)';
+    });
+    waveAnimId = requestAnimationFrame(frame);
+  }
+  frame();
+}
+
+function clearConvo() {
+  document.getElementById('cvMsgs').innerHTML =
+    '<div class="cv-empty">Start the conversation — both people can speak freely<br>The app will detect who\'s speaking which language</div>';
+}
+
+// ═══════════════════════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════════════════════
+function addHist(orig, trans, fn, tn) {
+  hist.unshift({ orig, trans, fn, tn, ts: Date.now() });
+  if (hist.length > 60) hist = hist.slice(0,60);
+  try { localStorage.setItem('lg_h', JSON.stringify(hist)); } catch(e){}
+}
+function renderHist() {
+  const list = document.getElementById('histlist');
+  const cnt  = document.getElementById('histcnt');
+  cnt.textContent = hist.length+' items';
+  if (!hist.length) {
+    list.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--mu);font-size:.79rem">No history yet</div>';
+    return;
+  }
+  list.innerHTML = hist.slice(0,30).map((h,i) => `
+    <div class="hi" onclick="loadHist(${i})">
+      <div class="hi-pair">${h.fn} → ${h.tn}</div>
+      <div class="hi-orig">${esc(h.orig)}</div>
+      <div class="hi-trans">${esc(h.trans)}</div>
+      <div class="hi-t">${new Date(h.ts).toLocaleString()}</div>
+    </div>`).join('');
+}
+function loadHist(i) {
+  const h = hist[i]; if (!h) return;
+  setMode('translate');
+  document.getElementById('inTxt').value = h.orig;
+  document.getElementById('tOut').textContent = h.trans;
+  document.getElementById('ccnt').textContent = h.orig.length;
+}
+function clearHist() { hist=[]; localStorage.removeItem('lg_h'); renderHist(); toast('Cleared'); }
+function toggleHistVis() { const l=document.getElementById('histlist'); l.style.display=l.style.display==='none'?'':'none'; }
+
+// ═══════════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════════
+function clearIn() {
+  document.getElementById('inTxt').value='';
+  document.getElementById('ccnt').textContent='0';
+  document.getElementById('tOut').innerHTML='<span class="ph">Translation appears here…</span>';
+  document.getElementById('dbadge').style.display='none';
+}
+function copyT(which) {
+  const txt = which==='in' ? document.getElementById('inTxt').value : document.getElementById('tOut').textContent;
+  if (!txt) return;
+  navigator.clipboard.writeText(txt).then(()=>toast('Copied!')).catch(()=>toast('Copy failed'));
+}
+function setMode(m) {
+  ['translate','conversation','history'].forEach(x => {
+    document.getElementById('mode-'+x).classList.toggle('on', x===m);
+    document.getElementById('tab-'+x).classList.toggle('on', x===m);
+  });
+  if (m==='history') renderHist();
+  if (m!=='conversation' && convoActive) stopConvo();
+}
+function toast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2400);
+}
+function esc(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
